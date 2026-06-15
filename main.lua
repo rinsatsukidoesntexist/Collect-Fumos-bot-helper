@@ -5,6 +5,7 @@ slab = require("lib.slab")
 -- utils
 local time_format_utils = require("utils.time_format_utils")
 local color_utils = require("utils.color_utils")
+local save_utils = require("utils.save_utils")
 
 -- classes
 local Timer = require("classes.timer")
@@ -23,9 +24,13 @@ local timer_adventure = Timer(0)
 local timer_sound_test = Timer(0)
 
 -- variables
+local enable_debug_keybinds = true
+
 local pet_finish_text = "-"
 local adventure_finish_text = "-"
 local status_text = ""
+
+local save_dir = love.filesystem.getSaveDirectory()
 
 local sound_test_index = 0
 
@@ -135,6 +140,7 @@ local function pet_timer_timeout(timer)
     print("pet finish")
     timer:pause()
 
+    sound_pet_finish:play()
     pet_finish_text = "pet finished!!!"
 
 end
@@ -145,6 +151,7 @@ local function adventure_timer_timeout(timer)
     print("adventure finish")
     timer:pause()
 
+    sound_adventure_finish:play()
     adventure_finish_text = "adventure finished!!!"
 
 end
@@ -271,8 +278,8 @@ local function window_2()
     slab.PushFont(alttp_font_gui)
 
     section("other:")
-    change_adv_sfx = button("change adventure sound effect")
-    change_pet_sfx = button("change pet sound effect")
+    --change_adv_sfx = button("change adventure sound effect")
+    --change_pet_sfx = button("change pet sound effect")
     do_sound_test = button("sound test")
 
     section(status_text)
@@ -304,7 +311,37 @@ local function window_2()
     
 end
 
+local function load_save()
+
+    local saved_data = save_utils.get_save()
+    local is_valid = save_utils.sanity_check_save(saved_data)
+    if (not is_valid) then 
+        
+        status_text = "failed to load save"
+        return
+    
+    end
+
+    print("actually load save now")
+    local current_time = os.time()
+    local closed_at = saved_data.close_timestamp
+    local delta = current_time - closed_at
+
+    -- 0.01 is a small hack to make the timer timeout immediately when opening the app. if its 0 it doesn't check for timeout
+    timer_pet.time = math.max(saved_data.pet - delta, 0.01)
+    timer_adventure.time = math.max(saved_data.adventure - delta, 0.01)
+
+    timer_pet.paused = saved_data.pet_pause
+    timer_adventure.paused = saved_data.adventure_pause
+
+    status_text = "loaded your save"
+    
+end
+
 function love.load()
+
+    love.window.setIcon(love.image.newImageData("icon.png"))
+    love.window.setTitle("Collect Fumos! bot helper v1")
 
     love.graphics.setBackgroundColor(color_utils.unpack_color_rgb_255({r = 182, g = 143, b = 255, a = 255}))
     slab.Initialize()
@@ -318,11 +355,60 @@ function love.load()
 
     cancel_timer(timer_pet)
     cancel_timer(timer_adventure)
-    cancel_timer(timer_sound_test)
+    cancel_timer(timer_sound_test) 
 
     timer_pet.timeout_func = pet_timer_timeout
     timer_adventure.timeout_func = adventure_timer_timeout
     timer_sound_test.timeout_func = sound_test_timer_timeout
+
+    load_save()
+    
+end
+
+function love.quit()
+
+    local save = love.filesystem.newFile("save.lua")
+    local close_timestamp = os.time()
+    save:open("w")
+
+    -- pointless stuff
+    save:write("-- YES- the save files are stored in plain text. what's the issue?\n\n\n")
+    for i = 1, love.math.random(30, 70) do
+        
+        local phrase_index = love.math.random(1, #data.SAVE_PHRASES)
+        save:write(string.format("-- %s\n", data.SAVE_PHRASES[phrase_index]))
+
+    end
+
+    -- actual saving below
+    save:write("local save = {}\n")
+
+    save:write("save.close_timestamp = " .. close_timestamp .. "\n") -- why the fuck is format not working with close_timestamp??? fuck you lua
+
+    save:write(string.format("save.adventure = %d\n", timer_adventure.time))
+    save:write(string.format("save.pet = %d\n", timer_pet.time))
+    save:write(string.format("save.adventure_pause = %s\n", tostring(timer_adventure.paused)))
+    save:write(string.format("save.pet_pause = %s\n", tostring(timer_pet.paused)))
+    save:write("return save")
+
+    save:close()
+    
+end
+
+function love.keypressed(key)
+
+    if (not enable_debug_keybinds) then return end
+    if (key == "1") then
+        
+        timer_adventure.time = 3
+
+    end
+
+    if (key == "2") then
+        
+        timer_pet.time = 3
+
+    end
     
 end
 

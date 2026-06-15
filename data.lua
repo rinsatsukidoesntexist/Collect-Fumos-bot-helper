@@ -45,4 +45,11 @@ data.PET_TIME = 60*30
 
 data.TIMER_ADD_TIME = 5
 
+data.SAVE_PHRASES = {
+    "rin satsuki is watching you.",
+    "rin satsuki sees you.",
+    "she is here.",
+    "8D E1 8C 8E 20 97 D9",
+}
+
 return data
