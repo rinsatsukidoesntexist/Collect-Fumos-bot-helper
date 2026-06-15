@@ -1,16 +1,10 @@
--- future proofing: organize code into multiple files better its kinda all over the place
--- separate more into functions
-
--- globals
-ORIG_SCREEN_WIDTH = 900
-ORIG_SCREEN_HEIGHT = 850
-
--- libs
+-- lib
 class = require("lib.middleclass")
 slab = require("lib.slab")
 
 -- utils
 local time_format_utils = require("utils.time_format_utils")
+local color_utils = require("utils.color_utils")
 
 -- classes
 local Timer = require("classes.timer")
@@ -18,221 +12,165 @@ local Timer = require("classes.timer")
 -- other requires
 local data = require("data")
 
--- consts
-local WINDOW_PARAMS = {
-    W = ORIG_SCREEN_WIDTH,
-    H = ORIG_SCREEN_HEIGHT,
+local LABEL_TEXT_COLOR = {color_utils.unpack_color_rgb_255({r = 255, g = 255, b = 255, a = 255})}
+local LABEL_WIDTH = 450
+
+local BUTTON_HEIGHT = 50
+local BUTTON_COLOR = {color_utils.unpack_color_rgb_255({r = 139, g = 104, b = 227, a = 255})}
+local BUTTON_HOVER_COLOR = {color_utils.unpack_color_rgb_255({r = 104, g = 122, b = 227, a = 255})}
+local BUTTON_PRESS_COLOR = {color_utils.unpack_color_rgb_255({r = 230, g = 122, b = 219, a = 255})}
+
+local SECTION_HEIGHT = 30
+local SECTION_COLOR = {color_utils.unpack_color_rgb_255({r = 238, g = 143, b = 255, a = 255})}
+
+local BUTTON_PARAMS = {
+    W = LABEL_WIDTH,
+    H = BUTTON_HEIGHT,
+    Color = BUTTON_COLOR,
+    HoverColor = BUTTON_HOVER_COLOR,
+    PressColor = BUTTON_PRESS_COLOR,
+}
+
+local SECTION_PARAMS = {
+    W = LABEL_WIDTH,
+    H = SECTION_HEIGHT,
+    Color = SECTION_COLOR,
+    Disabled = true
+}
+
+local WINDOW_1_PARAMS = {
+
+    W = LABEL_WIDTH,
+    H = SCREEN_HEIGHT,
+
     AutoSizeWindow = false,
     AutoSizeWindowW = false,
     AutoSizeWindowH = false,
     AllowResize = false,
+    AutoSizeContent = false,
+
     Border = 0,
     Rounding = 0,
-    X = 0,
+
+    X = -3,
     Y = 0,
+
     ConstrainPosition = true,
+    CanObstruct = false,
+
 }
 
--- assets
-local alttp_font_gui = love.graphics.newFont("fonts/RetGanon.ttf", 26)
-local alttp_font_other = love.graphics.newFont("fonts/RetGanon.ttf", 30)
+local WINDOW_2_PARAMS = {
 
--- variables
-local status_message = ""
-local pet_message = "-"
-local adventure_message = "-"
+    W = LABEL_WIDTH,
+    H = SCREEN_HEIGHT,
 
-local sound_adventure_finish = love.audio.newSource("sounds/adventure.ogg", "static")
-local sound_pet_finish = love.audio.newSource("sounds/pet.ogg", "static")
+    AutoSizeWindow = false,
+    AutoSizeWindowW = false,
+    AutoSizeWindowH = false,
+    AllowResize = false,
+    AutoSizeContent = false,
 
-local sound_test_wait = 2
-local sound_test_enabled = false
-local sound_test_index = 0
-local sound_test_table = {sound_adventure_finish, sound_pet_finish}
+    Border = 0,
+    Rounding = 0,
 
--- instances
-local timer_adventure = Timer(0, function()
-    
-    adventure_message = "adventure finished!!"
-    sound_adventure_finish:play()
-    
-end)
+    X = LABEL_WIDTH,
+    Y = 0,
 
-local timer_petting = Timer(0, function()
+    ConstrainPosition = true,
+    CanObstruct = false,
 
-    pet_message = "pet finished!!"
-    sound_pet_finish:play()
-    
-end)
+}
 
-local timer_sound_test = Timer(sound_test_wait, function(self)
+local STYLE_PARAMS = {
 
-    if (not sound_test_enabled) then return end
+    WindowBackgroundColor = {color_utils.unpack_color_rgb_255({r = 182, g = 143, b = 255, a = 255})},
+    TextColor = LABEL_TEXT_COLOR,
+    ButtonDisabledTextColor = LABEL_TEXT_COLOR,
 
-    local sfx = sound_test_table[sound_test_index]
-    if (not sfx) then 
+}
 
-        sound_test_enabled = false
-        self:pause()
-        return
+---@param text string
+local function section(text)
 
-    end
-
-    sfx:play()
-    self:set_time(sound_test_wait)
-    sound_test_index = sound_test_index + 1
-    
-end)
-
-local function update_timers(dt)
-
-    timer_adventure:update(dt)
-    timer_petting:update(dt)
-    timer_sound_test:update(dt)
+    return slab.Button(text, SECTION_PARAMS)
     
 end
 
-local function do_gui()
+---@param text string
+local function button(text)
 
-    slab.PushFont(alttp_font_gui)
+    return slab.Button(text, BUTTON_PARAMS)
+    
+end
 
-    local SECTION_BUTTON_PARAMS = {W = 400, H = 30, Color = {0.9, 0.9, 0.9, 1}, Disabled = true}
-    local NORMAL_BUTTON_PARAMS = {W = 400, H = 50}
-
-    local TEXT_TIMER_ADVENTURE = "adventure timer: " .. timer_adventure:format()
-    local TEXT_TIMER_PETTING = "petting timer: " .. timer_petting:format()
+local function window_1()
 
     ---@type AdventureType
     local selected_adventure
+    local start_pet = false
 
-    slab.BeginWindow("MyFirstWindow", WINDOW_PARAMS)
-	slab.Button("adventures:", SECTION_BUTTON_PARAMS)
+    local stop_adventure = false
+    local stop_pet = false
 
-    for _, Adventure in ipairs(data.ADVENTURES) do
-        
-        local button_text = string.format("%s > Lv %d < %s", Adventure.title, Adventure.level, time_format_utils.format_seconds(Adventure.duration))
-        if slab.Button(button_text, NORMAL_BUTTON_PARAMS) and timer_adventure.paused then
+    slab.BeginWindow("window_1", WINDOW_1_PARAMS)
+
+    section("adventures:")
+    for _, adventure in ipairs(data.ADVENTURES) do
+
+        local button_text = string.format("%s > Lv %d < %s", adventure.title, adventure.level, time_format_utils.format_seconds(adventure.duration))
+        if (button(button_text)) then
             
-            love.system.setClipboardText(Adventure.command)
-            selected_adventure = Adventure
-            status_message = "copied adventure command to your clipboard"
-            adventure_message = "adventure not finished"
+            selected_adventure = adventure
 
         end
 
     end
 
-    slab.Separator()
-    slab.Button("petting:", SECTION_BUTTON_PARAMS)
-    if slab.Button("start pet timer", NORMAL_BUTTON_PARAMS) and timer_petting.paused then
-        
-        love.system.setClipboardText(data.PET_COMMAND)
-        timer_petting:set_time(data.PET_TIME + data.TIMER_ADD_TIME)
-        timer_petting:unpause()
+    stop_adventure = button("[stop adventure timer]")
 
-        status_message = "copied pet command to your clipboard"
-        pet_message = "pet not finished"
+    section("petting:")
+    start_pet = button("start pet timer")
+    stop_pet = button("stop pet timer")
 
-    end
+    section("info:")
+    section("(adv finish text)")
+    section("(pet finish text)")
+    section("(adv timer)")
+    section("(pet timer)")
 
-    slab.Separator()
-    slab.Button("timer control:", SECTION_BUTTON_PARAMS)
-
-    if slab.Button("stop adventure", NORMAL_BUTTON_PARAMS) then
-        
-        timer_adventure:set_time(0)
-        timer_adventure:pause()
-
-        status_message = "stopped adventure timer"
-        adventure_message = "-"
-
-    end
-
-    if slab.Button("stop petting", NORMAL_BUTTON_PARAMS) then
-        
-        timer_petting:set_time(0)
-        timer_petting:pause()
-
-        status_message = "stopped pet timer"
-        pet_message = "-"
-
-    end
-
-    slab.Separator()
-    slab.Button("info:", SECTION_BUTTON_PARAMS)
-    slab.Button(TEXT_TIMER_ADVENTURE, SECTION_BUTTON_PARAMS)
-    slab.Button(TEXT_TIMER_PETTING, SECTION_BUTTON_PARAMS)
-    slab.Button(adventure_message, SECTION_BUTTON_PARAMS)
-    slab.Button(pet_message, SECTION_BUTTON_PARAMS)
-
-    slab.Separator()
-    slab.Button(status_message, SECTION_BUTTON_PARAMS)
-
-	slab.EndWindow()
-
-    if (selected_adventure) then
-        
-        timer_adventure:set_time(selected_adventure.duration + data.TIMER_ADD_TIME)
-        timer_adventure:unpause()
-
-    end
-
-    slab.PopFont()
+    slab.EndWindow()
     
-end
-
-function love.keypressed(key)
-
-    if (key ~= "f1") then return end
-    if (sound_test_enabled) then return end
-    print("snd test")
-
-    sound_test_index = 1
-    sound_test_enabled = true
-
-    timer_sound_test:set_time(0.1)
-    timer_sound_test:unpause()
-
 end
 
 function love.load()
 
-    love.window.setIcon(love.image.newImageData("icon.png"))
-    love.window.setTitle("Collect Fumos! bot helper v0")
-
-    timer_adventure:pause()
-    timer_petting:pause()
-    
-    love.graphics.setBackgroundColor(1, 1, 1, 1)
-    love.window.setMode(ORIG_SCREEN_WIDTH, ORIG_SCREEN_HEIGHT)
+    love.graphics.setBackgroundColor(color_utils.unpack_color_rgb_255({r = 182, g = 143, b = 255, a = 255}))
     slab.Initialize()
 
+    slab_style = slab.GetStyle()
+    for entry, value in pairs(STYLE_PARAMS) do
+        
+        slab_style[entry] = value
+
+    end
+    
 end
 
 function love.update(dt)
 
     slab.Update(dt)
-    update_timers(dt)
-    do_gui()
+
+    window_1()
+
+    slab.BeginWindow("window_2", WINDOW_2_PARAMS)
+    slab.Button("abc", SECTION_PARAMS)
+    slab.EndWindow()
 
 end
 
 function love.draw()
-
+    
     slab.Draw()
     
-    love.graphics.setColor(1, 1, 1, 1)
-    -- this is reliant on slab's font that it used before. not very good
-    --local font = alttp_font_other
-
-    local str_snd_test = "press F1 for sound test"
-    local str_copyright = "program created by thewindcarriesmeaway"
-    local str_copyright_b = "feel free to distribute and or modify"
-
-    love.graphics.print(str_snd_test, ORIG_SCREEN_WIDTH - 220, 0)
-    love.graphics.print(str_copyright, ORIG_SCREEN_WIDTH - 370, 35)
-    love.graphics.print(str_copyright_b, ORIG_SCREEN_WIDTH - 330, 70)
-
-    love.graphics.print("version 0", ORIG_SCREEN_WIDTH - 100, ORIG_SCREEN_HEIGHT - 40)
-
 end
