@@ -14,6 +14,8 @@ local data = require("data")
 
 -- assets
 local alttp_font_gui = love.graphics.newFont("fonts/RetGanon.ttf", 26)
+local sound_adventure_finish = love.audio.newSource("sounds/adventure.ogg", "static")
+local sound_pet_finish = love.audio.newSource("sounds/pet.ogg", "static")
 
 -- instances
 local timer_pet = Timer(0)
@@ -25,6 +27,9 @@ local pet_finish_text = "-"
 local adventure_finish_text = "-"
 local status_text = ""
 
+local sound_test_index = 0
+
+local sounds = {sound_adventure_finish, sound_pet_finish}
 local timers = {timer_pet, timer_adventure, timer_sound_test}
 
 -- constants
@@ -148,7 +153,20 @@ end
 local function sound_test_timer_timeout(timer)
     
     print("sound test")
-    timer:pause()
+    sound_test_index = sound_test_index + 1
+
+    local sound = sounds[sound_test_index]
+    if (not sound) then
+        
+        timer:pause()
+        sound_test_index = 0
+        return
+
+    end
+
+    sound:play()
+    timer:set_time(1)
+    timer:unpause()
 
 end
 
@@ -191,12 +209,12 @@ local function window_1()
     start_pet = button("start pet timer")
     stop_pet = button("stop pet timer")
 
-    section("info:")
+    section("status:")
     section(adventure_finish_text)
     section(pet_finish_text)
+    section("timers:")
     section("adventure timer: " .. timer_adventure:format())
     section("pet timer: " .. timer_pet:format())
-    section(status_text)
 
     if (stop_adventure) then
         
@@ -245,16 +263,41 @@ end
 
 local function window_2()
 
+    local do_sound_test = false
+    local change_adv_sfx = false
+    local change_pet_sfx = false
+
     slab.BeginWindow("window_2", WINDOW_2_PARAMS)
     slab.PushFont(alttp_font_gui)
 
     section("other:")
-    button("change adventure sound effect")
-    button("change pet sound effect")
-    button("sound test")
+    change_adv_sfx = button("change adventure sound effect")
+    change_pet_sfx = button("change pet sound effect")
+    do_sound_test = button("sound test")
 
+    section(status_text)
+    section("----------------------------------")
     section("program created by thewindcarriesmeaway")
     section("feel free to distribute and modify")
+
+    if (do_sound_test and sound_test_index == 0) then
+        
+        timer_sound_test:set_time(0.1)
+        timer_sound_test:unpause()
+
+        status_text = "SOUND TEST BAYBEEEEEEE TURN UP DA VOLUME!!"
+
+    end
+
+    if (change_adv_sfx) then
+        
+        status_text = "change adventure sfx"
+
+    elseif (change_pet_sfx) then
+        
+        status_text = "change pet sfx"
+
+    end
     
     slab.PopFont()
     slab.EndWindow()
