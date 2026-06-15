@@ -1,3 +1,6 @@
+-- future proofing: organize code into multiple files better its kinda all over the place
+-- separate more into functions
+
 -- globals
 ORIG_SCREEN_WIDTH = 900
 ORIG_SCREEN_HEIGHT = 850
@@ -25,8 +28,8 @@ local WINDOW_PARAMS = {
     AllowResize = false,
     Border = 0,
     Rounding = 0,
-    X = 49,
-    Y = 19,
+    X = 0,
+    Y = 0,
     ConstrainPosition = true,
 }
 
@@ -219,7 +222,8 @@ function love.draw()
     slab.Draw()
     
     love.graphics.setColor(1, 1, 1, 1)
-    local font = alttp_font_other
+    -- this is reliant on slab's font that it used before. not very good
+    --local font = alttp_font_other
 
     local str_snd_test = "press F1 for sound test"
     local str_copyright = "program created by thewindcarriesmeaway"
@@ -228,5 +232,7 @@ function love.draw()
     love.graphics.print(str_snd_test, ORIG_SCREEN_WIDTH - 220, 0)
     love.graphics.print(str_copyright, ORIG_SCREEN_WIDTH - 370, 35)
     love.graphics.print(str_copyright_b, ORIG_SCREEN_WIDTH - 330, 70)
+
+    love.graphics.print("version 0", ORIG_SCREEN_WIDTH - 100, ORIG_SCREEN_HEIGHT - 40)
 
 end
