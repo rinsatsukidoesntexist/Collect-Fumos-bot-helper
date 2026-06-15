@@ -12,6 +12,22 @@ local Timer = require("classes.timer")
 -- other requires
 local data = require("data")
 
+-- assets
+local alttp_font_gui = love.graphics.newFont("fonts/RetGanon.ttf", 26)
+
+-- instances
+local timer_pet = Timer(0)
+local timer_adventure = Timer(0)
+local timer_sound_test = Timer(0)
+
+-- variables
+local pet_finish_text = "-"
+local adventure_finish_text = "-"
+local status_text = ""
+
+local timers = {timer_pet, timer_adventure, timer_sound_test}
+
+-- constants
 local LABEL_TEXT_COLOR = {color_utils.unpack_color_rgb_255({r = 255, g = 255, b = 255, a = 255})}
 local LABEL_WIDTH = 450
 
@@ -24,18 +40,22 @@ local SECTION_HEIGHT = 30
 local SECTION_COLOR = {color_utils.unpack_color_rgb_255({r = 238, g = 143, b = 255, a = 255})}
 
 local BUTTON_PARAMS = {
+    
     W = LABEL_WIDTH,
     H = BUTTON_HEIGHT,
     Color = BUTTON_COLOR,
     HoverColor = BUTTON_HOVER_COLOR,
     PressColor = BUTTON_PRESS_COLOR,
+
 }
 
 local SECTION_PARAMS = {
+
     W = LABEL_WIDTH,
     H = SECTION_HEIGHT,
     Color = SECTION_COLOR,
     Disabled = true
+
 }
 
 local WINDOW_1_PARAMS = {
@@ -104,6 +124,43 @@ local function button(text)
     
 end
 
+---@param timer Timer
+local function pet_timer_timeout(timer)
+    
+    print("pet finish")
+    timer:pause()
+
+    pet_finish_text = "pet finished!!!"
+
+end
+
+---@param timer Timer
+local function adventure_timer_timeout(timer)
+    
+    print("adventure finish")
+    timer:pause()
+
+    adventure_finish_text = "adventure finished!!!"
+
+end
+
+---@param timer Timer
+local function sound_test_timer_timeout(timer)
+    
+    print("sound test")
+    timer:pause()
+
+end
+
+---@param timer Timer
+local function cancel_timer(timer)
+
+    print("so lame! cancel!")
+    timer:pause()
+    timer:set_time(0)
+    
+end
+
 local function window_1()
 
     ---@type AdventureType
@@ -113,6 +170,7 @@ local function window_1()
     local stop_adventure = false
     local stop_pet = false
 
+    slab.PushFont(alttp_font_gui)
     slab.BeginWindow("window_1", WINDOW_1_PARAMS)
 
     section("adventures:")
@@ -134,11 +192,71 @@ local function window_1()
     stop_pet = button("stop pet timer")
 
     section("info:")
-    section("(adv finish text)")
-    section("(pet finish text)")
-    section("(adv timer)")
-    section("(pet timer)")
+    section(adventure_finish_text)
+    section(pet_finish_text)
+    section("adventure timer: " .. timer_adventure:format())
+    section("pet timer: " .. timer_pet:format())
+    section(status_text)
 
+    if (stop_adventure) then
+        
+        cancel_timer(timer_adventure)
+        adventure_finish_text = "-"
+
+        status_text = "interrupt adventure"
+
+    end
+
+    if (stop_pet) then
+        
+        cancel_timer(timer_pet)
+        pet_finish_text = "-"
+        
+        status_text = "interrupt pet"
+
+    end
+
+    if (start_pet and timer_pet.paused) then
+        
+        pet_finish_text = "pet not finished"
+        status_text = "copied pet command to clipboard"
+
+        timer_pet:set_time(data.PET_TIME + data.TIMER_ADD_TIME)
+        timer_pet:unpause()
+
+    end
+
+    if (selected_adventure and timer_adventure.paused) then
+        
+        adventure_finish_text = "on adventure: " .. selected_adventure.title
+        status_text = "copied adventure command to clipboard"
+
+        timer_adventure:set_time(selected_adventure.duration + data.TIMER_ADD_TIME)
+        timer_adventure:unpause()
+
+        love.system.setClipboardText(selected_adventure.command)
+
+    end
+
+    slab.PopFont()
+    slab.EndWindow()
+    
+end
+
+local function window_2()
+
+    slab.BeginWindow("window_2", WINDOW_2_PARAMS)
+    slab.PushFont(alttp_font_gui)
+
+    section("other:")
+    button("change adventure sound effect")
+    button("change pet sound effect")
+    button("sound test")
+
+    section("program created by thewindcarriesmeaway")
+    section("feel free to distribute and modify")
+    
+    slab.PopFont()
     slab.EndWindow()
     
 end
@@ -154,18 +272,28 @@ function love.load()
         slab_style[entry] = value
 
     end
+
+    cancel_timer(timer_pet)
+    cancel_timer(timer_adventure)
+    cancel_timer(timer_sound_test)
+
+    timer_pet.timeout_func = pet_timer_timeout
+    timer_adventure.timeout_func = adventure_timer_timeout
+    timer_sound_test.timeout_func = sound_test_timer_timeout
     
 end
 
 function love.update(dt)
 
     slab.Update(dt)
+    for _, timer in ipairs(timers) do
+        
+        timer:update(dt)
+
+    end
 
     window_1()
-
-    slab.BeginWindow("window_2", WINDOW_2_PARAMS)
-    slab.Button("abc", SECTION_PARAMS)
-    slab.EndWindow()
+    window_2()
 
 end
 
