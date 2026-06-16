@@ -46,12 +46,4 @@ data.pet_command = "/fumo pet"
 data.pet_time = 60*30
 data.timer_add_time = 5
 
--- TODO: move to save module
-data.save_phrases = {
-    "rin satsuki is watching you.",
-    "rin satsuki sees you.",
-    "she is here.",
-    "8D E1 8C 8E 20 97 D9",
-}
-
 return data
