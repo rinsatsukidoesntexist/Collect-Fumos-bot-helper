@@ -6,6 +6,7 @@ slab = require("lib.slab")
 local time_format_utils = require("utils.time_format_utils")
 local color_utils = require("utils.color_utils")
 local save_utils = require("utils.save_utils")
+local sound_utils = require("utils.sound_utils")
 
 -- classes
 local Timer = require("classes.timer")
@@ -22,6 +23,10 @@ local sound_adventure_finish
 local sound_pet_finish
 ---@type love.Source
 local sound_press
+---@type love.Source
+local sound_set_timer
+---@type love.Source
+local sound_cancel_timer
 
 -- instances
 local timer_pet = Timer(0)
@@ -29,7 +34,7 @@ local timer_adventure = Timer(0)
 local timer_sound_test = Timer(0)
 
 -- variables
-local enable_debug_keybinds = false
+local enable_debug_keybinds = true
 
 local pet_finish_text = "-"
 local adventure_finish_text = "-"
@@ -37,34 +42,9 @@ local status_text = ""
 
 local sound_test_index = 0
 
----@type love.Source[]
-local sounds = {}
 local timers = {timer_pet, timer_adventure, timer_sound_test}
 
 -- constants
-
-local DEFAULT_SFX_ADVENTURE_PATH = "sounds/adventure.ogg"
-local DEFAULT_SFX_PET_PATH = "sounds/pet.ogg"
-local DEFAULT_SFX_PRESS_PATH = "sounds/press.ogg"
-
----@type {[string] : AudioTableEntry}
-local AUDIO_TABLE = {
-
-    pet = {
-        default_path = DEFAULT_SFX_PET_PATH,
-        user_path = "pet",
-    },
-    adventure = {
-        default_path = DEFAULT_SFX_ADVENTURE_PATH,
-        user_path = "adventure",
-    },
-    press = {
-        default_path = DEFAULT_SFX_PRESS_PATH,
-        user_path = "press",
-    },
-
-}
-
 local LABEL_TEXT_COLOR = {color_utils.unpack_color_rgb_255({r = 255, g = 255, b = 255, a = 255})}
 local LABEL_WIDTH = 450
 
@@ -160,7 +140,7 @@ local function button(text)
     local state = slab.Button(text, BUTTON_PARAMS)
     if (state) then
 
-        sound_press:play()
+        sound_utils.play_sound("press")
 
     end
     
@@ -174,7 +154,7 @@ local function pet_timer_timeout(timer)
     print("pet finish")
     timer:pause()
 
-    sound_pet_finish:play()
+    sound_utils.play_sound("pet")
     pet_finish_text = "pet finished!!!"
 
 end
@@ -185,11 +165,12 @@ local function adventure_timer_timeout(timer)
     print("adventure finish")
     timer:pause()
 
-    sound_adventure_finish:play()
+    sound_utils.play_sound("adventure")
     adventure_finish_text = "adventure finished!!!"
 
 end
 
+-- TODO: REDO SOUND TEST SHIT
 ---@param timer Timer
 local function sound_test_timer_timeout(timer)
     
@@ -260,11 +241,12 @@ end
 
 local function reload_sfx()
 
+    sounds = {}
+
     for name, entry in pairs(AUDIO_TABLE) do
         
         local source
         local user_defined_path = get_file_with_prefix(name)
-        --print(user_defined_path)
 
         if (user_defined_path) then
             
@@ -280,23 +262,9 @@ local function reload_sfx()
 
         end
 
-        if (name == "pet") then
-            
-            sound_pet_finish = source
-
-        elseif (name == "adventure") then
-            
-            sound_adventure_finish = source
-
-        elseif (name == "press") then
-            
-            sound_press = source
-
-        end
+        sounds[name] = source
  
     end
-
-    sounds = {sound_pet_finish, sound_adventure_finish, sound_press}
     
 end
 
@@ -327,8 +295,8 @@ local function window_1()
     stop_adventure = button("[stop adventure timer]")
 
     section("petting:")
-    start_pet = button("start pet timer")
-    stop_pet = button("stop pet timer")
+    start_pet = button("> start pet timer <")
+    stop_pet = button("[stop pet timer]")
 
     section("status:")
     section(adventure_finish_text)
@@ -404,6 +372,7 @@ local function window_2()
     section("----------------------------------")
     section("program created by thewindcarriesmeaway")
     section("feel free to distribute and modify")
+    section("version 1.1")
 
     if (do_sound_test and sound_test_index == 0) then
         
@@ -472,15 +441,8 @@ function love.load()
     love.filesystem.createDirectory("user_audio")
 
     love.window.setIcon(love.image.newImageData("icon.png"))
-    love.window.setTitle("Collect Fumos! bot helper v1")
+    love.window.setTitle("Collect Fumos! bot helper v1.1")
 
-    --[[
-    sound_adventure_finish = love.audio.newSource(DEFAULT_SFX_ADVENTURE_PATH, "static")
-    sound_pet_finish = love.audio.newSource(DEFAULT_SFX_PET_PATH, "static")
-    sound_press = love.audio.newSource(DEFAULT_SFX_PRESS_PATH, "static")
-
-    sounds = {sound_adventure_finish, sound_pet_finish, sound_press}
-    ]]
     reload_sfx()
 
     love.graphics.setBackgroundColor(color_utils.unpack_color_rgb_255({r = 182, g = 143, b = 255, a = 255}))
