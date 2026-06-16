@@ -1,7 +1,9 @@
+-- this module is pointless but we ball
+
 local data = {}
 
 ---@type AdventureType[]
-data.ADVENTURES = {
+data.adventures = {
     {
         title = "Fairy Forest Scouting",
         level = 1,
@@ -40,12 +42,12 @@ data.ADVENTURES = {
     },
 }
 
-data.PET_COMMAND = "/fumo pet"
-data.PET_TIME = 60*30
+data.pet_command = "/fumo pet"
+data.pet_time = 60*30
+data.timer_add_time = 5
 
-data.TIMER_ADD_TIME = 5
-
-data.SAVE_PHRASES = {
+-- TODO: move to save module
+data.save_phrases = {
     "rin satsuki is watching you.",
     "rin satsuki sees you.",
     "she is here.",
