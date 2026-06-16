@@ -100,6 +100,13 @@ function sound_utils.play_sound(name)
         return
 
     end
+
+    if (sound:isPlaying()) then
+        
+        sound:stop()
+
+    end
+
     sound:play()
     
 end

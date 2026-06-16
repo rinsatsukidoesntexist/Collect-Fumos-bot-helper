@@ -7,6 +7,7 @@ local sound_utils = require("utils.sound_utils")
 local timer_utils = require("utils.timer_utils")
 local time_format_utils = require("utils.time_format_utils")
 local sound_test_utils = require("utils.sound_test_utils")
+local random_image_utils = require("utils.random_image_utils")
 
 -- assets
 local alttp_font_gui = love.graphics.newFont("fonts/RetGanon.ttf", 26)
@@ -154,7 +155,9 @@ function gui_utils.do_window_1()
     section("adventure timer: " .. timer_utils.format("adventure"))
     section("pet timer: " .. timer_utils.format("pet"))
 
-    if (stop_adventure) then
+    if (stop_adventure and not timer_utils.is_paused("adventure")) then
+
+        sound_utils.play_sound("cancel_timer")
         
         timer_utils.cancel_timer("adventure")
         global_state.adventure_finish_text = "-"
@@ -163,7 +166,9 @@ function gui_utils.do_window_1()
 
     end
 
-    if (stop_pet) then
+    if (stop_pet and not timer_utils.is_paused("pet")) then
+
+        sound_utils.play_sound("cancel_timer")
         
         timer_utils.cancel_timer("pet")
         global_state.pet_finish_text = "-"
@@ -173,6 +178,8 @@ function gui_utils.do_window_1()
     end
 
     if (start_pet and timer_utils.is_paused("pet")) then
+
+        sound_utils.play_sound("set_timer")
         
         global_state.pet_finish_text = "pet not finished"
         global_state.status_text = "copied pet command to clipboard"
@@ -185,6 +192,8 @@ function gui_utils.do_window_1()
     end
 
     if (selected_adventure and timer_utils.is_paused("adventure")) then
+
+        sound_utils.play_sound("set_timer")
         
         global_state.adventure_finish_text = "on adventure: " .. selected_adventure.title
         global_state.status_text = "copied adventure command to clipboard"
@@ -211,6 +220,7 @@ function gui_utils.do_window_2()
     local do_sound_test = false
     local should_reload_sfx = false
     local borderless_toggle = false
+    local change_image = false
 
     local sound_test_text = sound_test_utils.is_in_progress() and "sound test (busy)" or "sound test"
 
@@ -219,8 +229,9 @@ function gui_utils.do_window_2()
 
     section("other:")
     should_reload_sfx = button("reload sound effects")
-    do_sound_test = button(sound_test_text)
     borderless_toggle = button("toggle borderless")
+    --change_image = button("change image")
+    do_sound_test = button(sound_test_text)
 
     section(global_state.status_text)
     section("press ESC to quit")
@@ -251,6 +262,15 @@ function gui_utils.do_window_2()
         
         global_state.borderless = not global_state.borderless
         love.window.setMode(SCREEN_WIDTH, SCREEN_HEIGHT, {borderless = global_state.borderless})
+
+    end
+
+    if (change_image) then
+        
+        global_state.random_image_path = random_image_utils.pick_one()
+        print(global_state.random_image_path)
+        global_state.random_image:release()
+        global_state.random_image = love.graphics.newImage(global_state.random_image_path)
 
     end
     

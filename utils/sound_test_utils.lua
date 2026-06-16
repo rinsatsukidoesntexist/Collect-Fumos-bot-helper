@@ -23,8 +23,10 @@ end
 function sound_test_utils.start_sound_test()
 
     if (doing_sound_test) then return end
+    
     setup()
     doing_sound_test = true
+
     print("sound test start")
     
 end

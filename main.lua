@@ -27,10 +27,10 @@ local enable_debug_keybinds = true
 
 function love.load()
 
-    slab.Initialize()
-
     love.filesystem.mount(love.filesystem.getSaveDirectory(), "save")
     love.filesystem.createDirectory("user_audio")
+
+    slab.Initialize()
 
     gui_utils.init_visuals()
     sound_utils.reload_sfx()

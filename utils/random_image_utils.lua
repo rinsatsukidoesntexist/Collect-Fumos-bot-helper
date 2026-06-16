@@ -31,12 +31,20 @@ local function remove_equal_items(array_a, array_b)
 end
 
 local function get_random_path()
-
+    
     local items = love.filesystem.getDirectoryItems("images/random")
 
     if (#global_state.seen_images == #items) then
         
+        local last = global_state.seen_images[#global_state.seen_images]
         global_state.seen_images = {}
+
+        if (last) then
+            
+            -- a tiny amount of pattern fuckery to remove the full path. lol!!
+            table.insert(global_state.seen_images, last:match("([^/]+)$"))
+
+        end
 
     end
 
