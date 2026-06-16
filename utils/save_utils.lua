@@ -4,6 +4,14 @@ local ENTRIES = {
     pet = "number",
     pet_pause = "boolean",
     adventure_pause = "boolean",
+    status_message_adventure = "string",
+    status_message_pet = "string",
+}
+
+local TYPE_TO_DEFAULT = {
+    number = 0,
+    boolean = false,
+    string = "-",
 }
 
 local save_utils = {}
@@ -61,27 +69,35 @@ function save_utils.sanity_check_save(save)
         
         if (not ENTRIES[entry]) then
             
-            print(string.format("[%s] is not a valid entry, discard this", entry))
-            return false
+            -- discard invalid entries
+            print(string.format("discard entry [%s]", entry))
+            save[entry] = nil
 
-        end
+        else
 
-        local expected_type = ENTRIES[entry]
-        if (type(value) ~= expected_type) then
-            
-            print(string.format("[%s] has an invalid type, expected [%s], got [%s]", entry, expected_type, type(value)))
-            return false
+            local expected_type = ENTRIES[entry]
+            if (type(value) ~= expected_type) then
+
+                local default = TYPE_TO_DEFAULT[expected_type]
+
+                -- set invalid types to defaults
+                print(string.format("entry [%s] has invalid data type, expected [%s] got [%s]\nsetting to default [%s]", entry, expected_type, type(value), tostring(default)))
+                save[entry] = default
+
+            end
 
         end
 
     end
 
-    for entry, _ in pairs(ENTRIES) do
+    for entry, type_str in pairs(ENTRIES) do
         
         if (type(save[entry]) == "nil") then
             
-            print(string.format("field [%s] is missing", entry))
-            return false
+            local default = TYPE_TO_DEFAULT[type_str]
+            print(string.format("field [%s] is missing, setting to default [%s]", entry, tostring(default)))
+
+            save[entry] = default
 
         end
 

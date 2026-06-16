@@ -15,8 +15,13 @@ local data = require("data")
 
 -- assets
 local alttp_font_gui = love.graphics.newFont("fonts/RetGanon.ttf", 26)
-local sound_adventure_finish = love.audio.newSource("sounds/adventure.ogg", "static")
-local sound_pet_finish = love.audio.newSource("sounds/pet.ogg", "static")
+
+---@type love.Source
+local sound_adventure_finish
+---@type love.Source
+local sound_pet_finish
+---@type love.Source
+local sound_press
 
 -- instances
 local timer_pet = Timer(0)
@@ -24,20 +29,42 @@ local timer_adventure = Timer(0)
 local timer_sound_test = Timer(0)
 
 -- variables
-local enable_debug_keybinds = true
+local enable_debug_keybinds = false
 
 local pet_finish_text = "-"
 local adventure_finish_text = "-"
 local status_text = ""
 
-local save_dir = love.filesystem.getSaveDirectory()
-
 local sound_test_index = 0
 
-local sounds = {sound_adventure_finish, sound_pet_finish}
+---@type love.Source[]
+local sounds = {}
 local timers = {timer_pet, timer_adventure, timer_sound_test}
 
 -- constants
+
+local DEFAULT_SFX_ADVENTURE_PATH = "sounds/adventure.ogg"
+local DEFAULT_SFX_PET_PATH = "sounds/pet.ogg"
+local DEFAULT_SFX_PRESS_PATH = "sounds/press.ogg"
+
+---@type {[string] : AudioTableEntry}
+local AUDIO_TABLE = {
+
+    pet = {
+        default_path = DEFAULT_SFX_PET_PATH,
+        user_path = "pet",
+    },
+    adventure = {
+        default_path = DEFAULT_SFX_ADVENTURE_PATH,
+        user_path = "adventure",
+    },
+    press = {
+        default_path = DEFAULT_SFX_PRESS_PATH,
+        user_path = "press",
+    },
+
+}
+
 local LABEL_TEXT_COLOR = {color_utils.unpack_color_rgb_255({r = 255, g = 255, b = 255, a = 255})}
 local LABEL_WIDTH = 450
 
@@ -122,7 +149,7 @@ local STYLE_PARAMS = {
 
 ---@param text string
 local function section(text)
-
+    
     return slab.Button(text, SECTION_PARAMS)
     
 end
@@ -130,8 +157,15 @@ end
 ---@param text string
 local function button(text)
 
-    return slab.Button(text, BUTTON_PARAMS)
+    local state = slab.Button(text, BUTTON_PARAMS)
+    if (state) then
+
+        sound_press:play()
+
+    end
     
+    return state
+
 end
 
 ---@param timer Timer
@@ -183,6 +217,86 @@ local function cancel_timer(timer)
     print("so lame! cancel!")
     timer:pause()
     timer:set_time(0)
+    
+end
+
+---@param prefix string
+---@return string?
+local function get_file_with_prefix(prefix)
+
+    local items = love.filesystem.getDirectoryItems("user_audio")
+    for _, file_name in ipairs(items) do
+
+        if (file_name:sub(1, #prefix) == prefix) then
+
+            return "user_audio/" .. file_name
+
+        end
+
+    end
+
+end
+
+---@param path string
+---@return love.Source?
+local function attempt_load_source(path)
+    
+    local ok, source = pcall(function()
+        
+        return love.audio.newSource(path, "static")
+    
+    end)
+
+    if (not ok) then
+        
+        print(string.format("failed to load audio source path [%s], %s", path, source))
+        return nil
+
+    end
+
+    return source
+
+end
+
+local function reload_sfx()
+
+    for name, entry in pairs(AUDIO_TABLE) do
+        
+        local source
+        local user_defined_path = get_file_with_prefix(name)
+        --print(user_defined_path)
+
+        if (user_defined_path) then
+            
+            print("attempt to use user defined source for " .. name)
+            source = attempt_load_source(user_defined_path)
+
+        end
+
+        if (not source) then
+            
+            print("use default for " .. name)
+            source = love.audio.newSource(entry.default_path, "static")
+
+        end
+
+        if (name == "pet") then
+            
+            sound_pet_finish = source
+
+        elseif (name == "adventure") then
+            
+            sound_adventure_finish = source
+
+        elseif (name == "press") then
+            
+            sound_press = source
+
+        end
+ 
+    end
+
+    sounds = {sound_pet_finish, sound_adventure_finish, sound_press}
     
 end
 
@@ -249,6 +363,8 @@ local function window_1()
         timer_pet:set_time(data.PET_TIME + data.TIMER_ADD_TIME)
         timer_pet:unpause()
 
+        love.system.setClipboardText(data.PET_COMMAND)
+
     end
 
     if (selected_adventure and timer_adventure.paused) then
@@ -271,8 +387,9 @@ end
 local function window_2()
 
     local do_sound_test = false
-    local change_adv_sfx = false
-    local change_pet_sfx = false
+    local should_reload_sfx = false
+    --local change_adv_sfx = false
+    --local change_pet_sfx = false
 
     slab.BeginWindow("window_2", WINDOW_2_PARAMS)
     slab.PushFont(alttp_font_gui)
@@ -280,6 +397,7 @@ local function window_2()
     section("other:")
     --change_adv_sfx = button("change adventure sound effect")
     --change_pet_sfx = button("change pet sound effect")
+    should_reload_sfx = button("reload sound effects")
     do_sound_test = button("sound test")
 
     section(status_text)
@@ -296,6 +414,14 @@ local function window_2()
 
     end
 
+    if (should_reload_sfx and sound_test_index == 0) then
+        
+        status_text = "attempt sfx reload"
+        reload_sfx()
+
+    end
+
+    --[[
     if (change_adv_sfx) then
         
         status_text = "change adventure sfx"
@@ -305,6 +431,7 @@ local function window_2()
         status_text = "change pet sfx"
 
     end
+    ]]
     
     slab.PopFont()
     slab.EndWindow()
@@ -334,14 +461,27 @@ local function load_save()
     timer_pet.paused = saved_data.pet_pause
     timer_adventure.paused = saved_data.adventure_pause
 
-    status_text = "loaded your save"
+    adventure_finish_text = saved_data.status_message_adventure
+    pet_finish_text = saved_data.status_message_pet
     
 end
 
 function love.load()
 
+    love.filesystem.mount(love.filesystem.getSaveDirectory(), "save")
+    love.filesystem.createDirectory("user_audio")
+
     love.window.setIcon(love.image.newImageData("icon.png"))
     love.window.setTitle("Collect Fumos! bot helper v1")
+
+    --[[
+    sound_adventure_finish = love.audio.newSource(DEFAULT_SFX_ADVENTURE_PATH, "static")
+    sound_pet_finish = love.audio.newSource(DEFAULT_SFX_PET_PATH, "static")
+    sound_press = love.audio.newSource(DEFAULT_SFX_PRESS_PATH, "static")
+
+    sounds = {sound_adventure_finish, sound_pet_finish, sound_press}
+    ]]
+    reload_sfx()
 
     love.graphics.setBackgroundColor(color_utils.unpack_color_rgb_255({r = 182, g = 143, b = 255, a = 255}))
     slab.Initialize()
@@ -389,6 +529,8 @@ function love.quit()
     save:write(string.format("save.pet = %d\n", timer_pet.time))
     save:write(string.format("save.adventure_pause = %s\n", tostring(timer_adventure.paused)))
     save:write(string.format("save.pet_pause = %s\n", tostring(timer_pet.paused)))
+    save:write(string.format("save.status_message_adventure = \"%s\"\n", adventure_finish_text))
+    save:write(string.format("save.status_message_pet = \"%s\"\n", pet_finish_text))
     save:write("return save")
 
     save:close()
