@@ -7,9 +7,7 @@ local time_format_utils = require("utils.time_format_utils")
 local color_utils = require("utils.color_utils")
 local save_utils = require("utils.save_utils")
 local sound_utils = require("utils.sound_utils")
-
--- classes
-local Timer = require("classes.timer")
+local timer_utils = require("utils.timer_utils")
 
 -- other requires
 local data = require("data")
@@ -28,21 +26,12 @@ local sound_set_timer
 ---@type love.Source
 local sound_cancel_timer
 
--- instances
-local timer_pet = Timer(0)
-local timer_adventure = Timer(0)
-local timer_sound_test = Timer(0)
-
 -- variables
 local enable_debug_keybinds = true
 
 local pet_finish_text = "-"
 local adventure_finish_text = "-"
 local status_text = ""
-
-local sound_test_index = 0
-
-local timers = {timer_pet, timer_adventure, timer_sound_test}
 
 -- constants
 local LABEL_TEXT_COLOR = {color_utils.unpack_color_rgb_255({r = 255, g = 255, b = 255, a = 255})}
@@ -148,59 +137,6 @@ local function button(text)
 
 end
 
----@param timer Timer
-local function pet_timer_timeout(timer)
-    
-    print("pet finish")
-    timer:pause()
-
-    sound_utils.play_sound("pet")
-    pet_finish_text = "pet finished!!!"
-
-end
-
----@param timer Timer
-local function adventure_timer_timeout(timer)
-    
-    print("adventure finish")
-    timer:pause()
-
-    sound_utils.play_sound("adventure")
-    adventure_finish_text = "adventure finished!!!"
-
-end
-
--- TODO: REDO SOUND TEST SHIT
----@param timer Timer
-local function sound_test_timer_timeout(timer)
-    
-    print("sound test")
-    sound_test_index = sound_test_index + 1
-
-    local sound = sounds[sound_test_index]
-    if (not sound) then
-        
-        timer:pause()
-        sound_test_index = 0
-        return
-
-    end
-
-    sound:play()
-    timer:set_time(1)
-    timer:unpause()
-
-end
-
----@param timer Timer
-local function cancel_timer(timer)
-
-    print("so lame! cancel!")
-    timer:pause()
-    timer:set_time(0)
-    
-end
-
 local function window_1()
 
     ---@type AdventureType
@@ -235,12 +171,12 @@ local function window_1()
     section(adventure_finish_text)
     section(pet_finish_text)
     section("timers:")
-    section("adventure timer: " .. timer_adventure:format())
-    section("pet timer: " .. timer_pet:format())
+    section("adventure timer: " .. timer_utils.format("adventure"))
+    section("pet timer: " .. timer_utils.format("pet"))
 
     if (stop_adventure) then
         
-        cancel_timer(timer_adventure)
+        timer_utils.cancel_timer("adventure")
         adventure_finish_text = "-"
 
         status_text = "interrupt adventure"
@@ -249,32 +185,32 @@ local function window_1()
 
     if (stop_pet) then
         
-        cancel_timer(timer_pet)
+        timer_utils.cancel_timer("pet")
         pet_finish_text = "-"
         
         status_text = "interrupt pet"
 
     end
 
-    if (start_pet and timer_pet.paused) then
+    if (start_pet and timer_utils.is_paused("pet")) then
         
         pet_finish_text = "pet not finished"
         status_text = "copied pet command to clipboard"
 
-        timer_pet:set_time(data.PET_TIME + data.TIMER_ADD_TIME)
-        timer_pet:unpause()
+        timer_utils.set_time("pet", data.PET_TIME + data.TIMER_ADD_TIME)
+        timer_utils.unpause("pet")
 
         love.system.setClipboardText(data.PET_COMMAND)
 
     end
 
-    if (selected_adventure and timer_adventure.paused) then
+    if (selected_adventure and timer_utils.is_paused("adventure")) then
         
         adventure_finish_text = "on adventure: " .. selected_adventure.title
         status_text = "copied adventure command to clipboard"
 
-        timer_adventure:set_time(selected_adventure.duration + data.TIMER_ADD_TIME)
-        timer_adventure:unpause()
+        timer_utils.set_time("adventure", selected_adventure.duration + data.TIMER_ADD_TIME)
+        timer_utils.unpause("adventure")
 
         love.system.setClipboardText(selected_adventure.command)
 
@@ -289,15 +225,11 @@ local function window_2()
 
     local do_sound_test = false
     local should_reload_sfx = false
-    --local change_adv_sfx = false
-    --local change_pet_sfx = false
 
     slab.BeginWindow("window_2", WINDOW_2_PARAMS)
     slab.PushFont(alttp_font_gui)
 
     section("other:")
-    --change_adv_sfx = button("change adventure sound effect")
-    --change_pet_sfx = button("change pet sound effect")
     should_reload_sfx = button("reload sound effects")
     do_sound_test = button("sound test")
 
@@ -307,44 +239,31 @@ local function window_2()
     section("feel free to distribute and modify")
     section("version 1.1")
 
-    if (do_sound_test and sound_test_index == 0) then
-        
-        timer_sound_test:set_time(0.1)
-        timer_sound_test:unpause()
+    -- TODO: TRIGGER SOUND TEST
+    if (do_sound_test) then
 
         status_text = "SOUND TEST BAYBEEEEEEE TURN UP DA VOLUME!!"
 
     end
 
-    if (should_reload_sfx and sound_test_index == 0) then
+    if (should_reload_sfx) then
         
         status_text = "attempt sfx reload"
         sound_utils.reload_sfx()
 
     end
-
-    --[[
-    if (change_adv_sfx) then
-        
-        status_text = "change adventure sfx"
-
-    elseif (change_pet_sfx) then
-        
-        status_text = "change pet sfx"
-
-    end
-    ]]
     
     slab.PopFont()
     slab.EndWindow()
     
 end
 
+-- TODO: move to save utils
 local function load_save()
 
     local saved_data = save_utils.get_save()
     local is_valid = save_utils.sanity_check_save(saved_data)
-    if (not is_valid) then 
+    if (not is_valid or not saved_data) then 
         
         status_text = "failed to load save"
         return
@@ -357,11 +276,20 @@ local function load_save()
     local delta = current_time - closed_at
 
     -- 0.01 is a small hack to make the timer timeout immediately when opening the app. if its 0 it doesn't check for timeout
-    timer_pet.time = math.max(saved_data.pet - delta, 0.01)
-    timer_adventure.time = math.max(saved_data.adventure - delta, 0.01)
+    timer_utils.set_time("pet", math.max(saved_data.pet - delta, 0.01))
+    timer_utils.set_time("adventure", math.max(saved_data.adventure - delta, 0.01))
 
-    timer_pet.paused = saved_data.pet_pause
-    timer_adventure.paused = saved_data.adventure_pause
+    if (not saved_data.pet_pause) then
+        
+        timer_utils.unpause("pet")
+
+    end
+
+    if (not saved_data.adventure_pause) then
+        
+        timer_utils.unpause("adventure")
+
+    end
 
     adventure_finish_text = saved_data.status_message_adventure
     pet_finish_text = saved_data.status_message_pet
@@ -388,6 +316,9 @@ function love.load()
 
     end
 
+    timer_utils.init_timers()
+
+    --[[
     cancel_timer(timer_pet)
     cancel_timer(timer_adventure)
     cancel_timer(timer_sound_test) 
@@ -397,10 +328,13 @@ function love.load()
     timer_sound_test.timeout_func = sound_test_timer_timeout
 
     load_save()
-    
+    ]]
 end
 
+-- TODO: move to save utils
 function love.quit()
+
+    if true then return end
 
     local save = love.filesystem.newFile("save.lua")
     local close_timestamp = os.time()
@@ -437,13 +371,13 @@ function love.keypressed(key)
     if (not enable_debug_keybinds) then return end
     if (key == "1") then
         
-        timer_adventure.time = 3
+        timer_utils.set_time("adventure", 2)
 
     end
 
     if (key == "2") then
         
-        timer_pet.time = 3
+        timer_utils.set_time("pet", 2)
 
     end
     
@@ -452,11 +386,7 @@ end
 function love.update(dt)
 
     slab.Update(dt)
-    for _, timer in ipairs(timers) do
-        
-        timer:update(dt)
-
-    end
+    timer_utils.update_timers(dt)
 
     window_1()
     window_2()

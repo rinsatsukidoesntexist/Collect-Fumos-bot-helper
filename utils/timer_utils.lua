@@ -1,6 +1,9 @@
 local Timer = require("classes.timer")
 local sound_utils = require("utils.sound_utils")
 
+local sounds_table = {}
+local sounds_index = 0
+
 -- just like luau huh!!
 ---@type {[string] : Timer}
 local timers = {}
@@ -32,13 +35,14 @@ end
 local function sound_test_timer_timeout(timer)
     
     print("sound test")
-    sound_test_index = sound_test_index + 1
+    --[[
+    sounds_index = sounds_index + 1
 
-    local sound = sounds[sound_test_index]
+    local sound = sounds_table[sounds_index]
     if (not sound) then
         
         timer:pause()
-        sound_test_index = 0
+        sounds_index = 0
         return
 
     end
@@ -46,6 +50,7 @@ local function sound_test_timer_timeout(timer)
     sound:play()
     timer:set_time(1)
     timer:unpause()
+    ]]
 
 end
 
@@ -72,6 +77,7 @@ function timer_utils.cancel_timer(name)
     
 end
 
+---@param name string
 function timer_utils.pause(name)
 
     local timer = get_timer(name)
@@ -81,6 +87,7 @@ function timer_utils.pause(name)
     
 end
 
+---@param name string
 function timer_utils.unpause(name)
 
     local timer = get_timer(name)
@@ -90,12 +97,58 @@ function timer_utils.unpause(name)
     
 end
 
+---@param name string
+---@return boolean?
+function timer_utils.is_paused(name)
+
+    local timer = get_timer(name)
+    if (not timer) then return end
+
+    return timer.paused
+    
+end
+
+---@param name string
+---@param time number
+function timer_utils.set_time(name, time)
+
+    local timer = get_timer(name)
+    if (not timer) then return end
+
+    timer:set_time(time)
+    
+end
+
+---@param name string
+---@return string?
+function timer_utils.format(name)
+
+    local timer = get_timer(name)
+    if (not timer) then return end
+
+    return timer:format()
+    
+end
+
+---@param name string
+---@return number?
+function timer_utils.get_duration(name)
+
+    local timer = get_timer(name)
+    if (not timer) then return end
+
+    return timer.time
+    
+end
+
 function timer_utils.init_timers()
 
     timers = {
-        adventure = Timer(0),
-        pet = Timer(0),
-        sound_test = Timer(0),
+
+        adventure = Timer(0, adventure_timer_timeout),
+        pet = Timer(0, pet_timer_timeout),
+        sound_test = Timer(0, sound_test_timer_timeout),
+
     }
     
     for name, _ in pairs(timers) do
@@ -104,6 +157,17 @@ function timer_utils.init_timers()
 
     end
 
+end
+
+---@param dt number
+function timer_utils.update_timers(dt)
+
+    for _, timer in pairs(timers) do
+        
+        timer:update(dt)
+
+    end
+    
 end
 
 return timer_utils
