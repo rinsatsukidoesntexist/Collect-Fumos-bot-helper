@@ -23,6 +23,23 @@ local AUDIO_TABLE = {
 local loaded_sounds = {}
 local sound_utils = {}
 
+---@param prefix string
+---@return string?
+local function get_file_with_prefix(prefix)
+    
+    local items = love.filesystem.getDirectoryItems("user_audio")
+    for _, file_name in ipairs(items) do
+
+        if (file_name:sub(1, #prefix) == prefix) then
+            
+            return "user_audio/" .. file_name
+
+        end
+
+    end
+
+end
+
 ---@param path string
 ---@return love.Source?
 local function attempt_load_source(path)

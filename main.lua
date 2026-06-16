@@ -201,73 +201,6 @@ local function cancel_timer(timer)
     
 end
 
----@param prefix string
----@return string?
-local function get_file_with_prefix(prefix)
-
-    local items = love.filesystem.getDirectoryItems("user_audio")
-    for _, file_name in ipairs(items) do
-
-        if (file_name:sub(1, #prefix) == prefix) then
-
-            return "user_audio/" .. file_name
-
-        end
-
-    end
-
-end
-
----@param path string
----@return love.Source?
-local function attempt_load_source(path)
-    
-    local ok, source = pcall(function()
-        
-        return love.audio.newSource(path, "static")
-    
-    end)
-
-    if (not ok) then
-        
-        print(string.format("failed to load audio source path [%s], %s", path, source))
-        return nil
-
-    end
-
-    return source
-
-end
-
-local function reload_sfx()
-
-    sounds = {}
-
-    for name, entry in pairs(AUDIO_TABLE) do
-        
-        local source
-        local user_defined_path = get_file_with_prefix(name)
-
-        if (user_defined_path) then
-            
-            print("attempt to use user defined source for " .. name)
-            source = attempt_load_source(user_defined_path)
-
-        end
-
-        if (not source) then
-            
-            print("use default for " .. name)
-            source = love.audio.newSource(entry.default_path, "static")
-
-        end
-
-        sounds[name] = source
- 
-    end
-    
-end
-
 local function window_1()
 
     ---@type AdventureType
@@ -386,7 +319,7 @@ local function window_2()
     if (should_reload_sfx and sound_test_index == 0) then
         
         status_text = "attempt sfx reload"
-        reload_sfx()
+        sound_utils.reload_sfx()
 
     end
 
@@ -443,7 +376,7 @@ function love.load()
     love.window.setIcon(love.image.newImageData("icon.png"))
     love.window.setTitle("Collect Fumos! bot helper v1.1")
 
-    reload_sfx()
+    sound_utils.reload_sfx()
 
     love.graphics.setBackgroundColor(color_utils.unpack_color_rgb_255({r = 182, g = 143, b = 255, a = 255}))
     slab.Initialize()
