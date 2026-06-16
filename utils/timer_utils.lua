@@ -1,8 +1,8 @@
 local Timer = require("classes.timer")
 local sound_utils = require("utils.sound_utils")
+local sound_test_utils = require("utils.sound_test_utils")
 
-local sounds_table = {}
-local sounds_index = 0
+local global_state = require("global_state")
 
 -- just like luau huh!!
 ---@type {[string] : Timer}
@@ -34,23 +34,12 @@ end
 ---@param timer Timer
 local function sound_test_timer_timeout(timer)
     
-    print("sound test")
-    --[[
-    sounds_index = sounds_index + 1
+    print("sound test timer...")
+    sound_test_utils.advance_sound_test()
 
-    local sound = sounds_table[sounds_index]
-    if (not sound) then
-        
-        timer:pause()
-        sounds_index = 0
-        return
-
-    end
-
-    sound:play()
+    if (not sound_test_utils.is_in_progress()) then return end
     timer:set_time(1)
     timer:unpause()
-    ]]
 
 end
 

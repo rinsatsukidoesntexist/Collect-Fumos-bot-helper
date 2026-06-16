@@ -6,16 +6,15 @@ class = require("lib.middleclass")
 slab = require("lib.slab")
 
 -- utils
-local time_format_utils = require("utils.time_format_utils")
-local color_utils = require("utils.color_utils")
 local save_utils = require("utils.save_utils")
 local sound_utils = require("utils.sound_utils")
 local timer_utils = require("utils.timer_utils")
 local gui_utils = require("utils.gui_utils")
+local random_image_utils = require("utils.random_image_utils")
 
 -- other requires
-local data = require("data")
 local global_state = require("global_state")
+--local my_cool_module = require("fat_girls")
 
 -- assets
 -- local my_image = love.graphics.newImage("patchouli_boobs.png")
@@ -38,6 +37,9 @@ function love.load()
     timer_utils.init_timers()
 
     save_utils.load_save()
+
+    global_state.random_image_path = random_image_utils.pick_one()
+    global_state.random_image = love.graphics.newImage(global_state.random_image_path)
 
 end
 
@@ -65,7 +67,15 @@ end
 
 function love.keypressed(key)
 
+    if (key == "escape") then
+        
+        love.event.quit()
+        return
+
+    end
+
     if (not enable_debug_keybinds) then return end
+
     if (key == "1") then
         
         timer_utils.set_time("adventure", 2)

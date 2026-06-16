@@ -1,3 +1,14 @@
+---@class Save
+---@field close_timestamp number
+---@field adventure number
+---@field pet number
+---@field adventure_pause boolean
+---@field pet_pause boolean
+---@field status_message_adventure string
+---@field status_message_pet string
+---@field borderless boolean
+---@field seen_images table
+
 local timer_utils = require("utils.timer_utils")
 
 local global_state = require("global_state")
@@ -20,6 +31,8 @@ local ENTRIES = {
     adventure_pause = "boolean",
     status_message_adventure = "string",
     status_message_pet = "string",
+    borderless = "boolean",
+    seen_images = "table",
 
 }
 
@@ -28,6 +41,7 @@ local TYPE_TO_DEFAULT = {
     number = 0,
     boolean = false,
     string = "-",
+    table = {},
 
 }
 
@@ -48,6 +62,13 @@ function save_utils.write_save_file()
 
     end
 
+    local seen_images_str = ""
+    for _, str in ipairs(global_state.seen_images) do
+        
+        seen_images_str = seen_images_str .. string.format("\"%s\",", str)
+
+    end
+
     -- actual saving below
     save:write("local save = {}\n")
 
@@ -61,6 +82,9 @@ function save_utils.write_save_file()
 
     save:write(string.format("save.status_message_adventure = \"%s\"\n", global_state.adventure_finish_text))
     save:write(string.format("save.status_message_pet = \"%s\"\n", global_state.pet_finish_text))
+    save:write(string.format("save.seen_images = {%s}\n", seen_images_str))
+
+    save:write(string.format("save.borderless = %s\n", tostring(global_state.borderless)))
 
     save:write("return save")
 
@@ -205,6 +229,10 @@ function save_utils.load_save()
 
     global_state.adventure_finish_text = saved_data.status_message_adventure
     global_state.pet_finish_text = saved_data.status_message_pet
+    global_state.borderless = saved_data.borderless
+    global_state.seen_images = saved_data.seen_images
+
+    love.window.setMode(SCREEN_WIDTH, SCREEN_HEIGHT, {borderless = global_state.borderless})
     
 end
 

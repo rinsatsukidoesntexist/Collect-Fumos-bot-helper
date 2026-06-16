@@ -1,4 +1,5 @@
 -- this module is pointless but we ball
+---@alias AdventureType {title: string, level: number, duration: number, command: string}
 
 local data = {}
 

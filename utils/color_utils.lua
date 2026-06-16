@@ -1,3 +1,5 @@
+---@alias ColorRgb255 {r: number, g: number, b: number, a: number}
+
 local color_utils = {}
 
 ---@param color ColorRgb255

@@ -104,4 +104,18 @@ function sound_utils.play_sound(name)
     
 end
 
+---@return love.Source[]
+function sound_utils.get_sounds_table()
+    
+    local t = {}
+    for _, source in pairs(loaded_sounds) do
+        
+        table.insert(t, source)
+
+    end
+
+    return t
+
+end
+
 return sound_utils

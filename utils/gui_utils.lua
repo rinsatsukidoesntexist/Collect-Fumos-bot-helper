@@ -6,6 +6,7 @@ local color_utils = require("utils.color_utils")
 local sound_utils = require("utils.sound_utils")
 local timer_utils = require("utils.timer_utils")
 local time_format_utils = require("utils.time_format_utils")
+local sound_test_utils = require("utils.sound_test_utils")
 
 -- assets
 local alttp_font_gui = love.graphics.newFont("fonts/RetGanon.ttf", 26)
@@ -202,26 +203,40 @@ end
 
 function gui_utils.do_window_2()
 
+    local image_w, image_h = global_state.random_image:getDimensions()
+
+    local image_scale_x = (SCREEN_WIDTH / 2) / image_w
+    local image_scale_y = 450 / image_h
+
     local do_sound_test = false
     local should_reload_sfx = false
+    local borderless_toggle = false
+
+    local sound_test_text = sound_test_utils.is_in_progress() and "sound test (busy)" or "sound test"
 
     slab.BeginWindow("window_2", WINDOW_2_PARAMS)
     slab.PushFont(alttp_font_gui)
 
     section("other:")
     should_reload_sfx = button("reload sound effects")
-    do_sound_test = button("sound test")
+    do_sound_test = button(sound_test_text)
+    borderless_toggle = button("toggle borderless")
 
     section(global_state.status_text)
+    section("press ESC to quit")
     section("----------------------------------")
     section("program created by thewindcarriesmeaway")
     section("feel free to distribute and modify")
     section("version 1.1")
 
-    -- TODO: TRIGGER SOUND TEST
-    if (do_sound_test) then
+    slab.Image("random_image", {Path = global_state.random_image_path, ScaleX = image_scale_x, ScaleY = image_scale_y})
+
+    if (do_sound_test and not sound_test_utils.is_in_progress()) then
 
         global_state.status_text = "SOUND TEST BAYBEEEEEEE TURN UP DA VOLUME!!"
+        sound_test_utils.start_sound_test()
+        timer_utils.set_time("sound_test", 0.01)
+        timer_utils.unpause("sound_test")
 
     end
 
@@ -229,6 +244,13 @@ function gui_utils.do_window_2()
         
         global_state.status_text = "attempt sfx reload"
         sound_utils.reload_sfx()
+
+    end
+
+    if (borderless_toggle) then
+        
+        global_state.borderless = not global_state.borderless
+        love.window.setMode(SCREEN_WIDTH, SCREEN_HEIGHT, {borderless = global_state.borderless})
 
     end
     

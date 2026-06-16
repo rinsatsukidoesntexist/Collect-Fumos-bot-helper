@@ -7,7 +7,6 @@ local Timer = class("Timer")
 
 local time_format_utils = require("utils.time_format_utils")
 
--- TODO: add ontimeout function, run it on end
 function Timer:initialize(time, timeout_func)
 
     self.time = time or 0
@@ -27,7 +26,7 @@ function Timer:update(dt)
     if (previous_time <= 0) then return end
     if (self.time > 0) then return end
 
-    print("timeout!")
+    --print("timeout!")
     if (self.timeout_func) then
         
         self:timeout_func()

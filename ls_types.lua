@@ -1,7 +1,0 @@
--- values are given in the range of (0 - 255)!
----@alias ColorRgb255 {r: number, g: number, b: number, a: number}
----@alias AdventureType {title: string, level: number, duration: number, command: string}
----@alias Save {close_timestamp: number, adventure: number, pet: number, adventure_pause: boolean, pet_pause: boolean, status_message_adventure: string, status_message_pet: string}
-
--- dont use
---@alias AudioTableEntry {name: string, default_path: string, user_path: string}
